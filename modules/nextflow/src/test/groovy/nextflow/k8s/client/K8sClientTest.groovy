@@ -467,6 +467,91 @@ class K8sClientTest extends Specification {
         result == [:]
     }
 
+    def 'should return terminated status when phase is Succeeded' () {
+        given:
+        def JSON = '''
+            {
+                "apiVersion": "v1",
+                "kind": "Pod",
+                "metadata": {
+                    "annotations": {
+                        "ProviderCreate": "done",
+                    },
+                    "creationTimestamp": "2020-07-29T10:25:38Z",
+                    "labels": {
+                        "app": "nextflow"
+                    },
+                    "name": "nf-5ffc6f18f229c7f5c58965440b309323",
+                    "namespace": "default",
+                    "resourceVersion": "366075909",
+                    "selfLink": "/api/v1/namespaces/default/pods/nf-5ffc6f18f229c7f5c58965440b309323",
+                    "uid": "f91a1e53-e4af-40b4-90d1-42b2dd8240a5"
+                },
+                
+                "status": {
+                    "conditions": [
+                        {
+                            "lastProbeTime": null,
+                            "lastTransitionTime": "2020-07-29T10:25:38Z",
+                            "status": "True",
+                            "type": "Initialized"
+                        },
+                        {
+                            "lastProbeTime": null,
+                            "lastTransitionTime": "2020-07-29T10:25:38Z",
+                            "status": "True",
+                            "type": "Ready"
+                        },
+                        {
+                            "lastProbeTime": null,
+                            "lastTransitionTime": "2020-07-29T10:25:38Z",
+                            "status": "True",
+                            "type": "PodScheduled"
+                        }
+                    ],
+                    "containerStatuses": [
+                        {
+                            "containerID": "eci://7188ce598c9bcf05d73327ca7cbf79f94279b2ec8a4d6483f5fa1ba3e84d5ce3",
+                            "image": "registry.cn-hangzhou.aliyuncs.com/biosofthub/star:2.7.5a-40906086",
+                            "imageID": "eci://registry.cn-hangzhou.aliyuncs.com/biosofthub/star:2.7.5a-40906086",
+                            "lastState": {
+                                "waiting": {}
+                            },
+                            "name": "nf-5ffc6f18f229c7f5c58965440b309323",
+                            "ready": true,
+                            "restartCount": 0,
+                            "state": {
+                                "running": {
+                                    "startedAt": "2020-07-29T10:26:18Z"
+                                }
+                            }
+                        }
+                    ],
+                    "hostIP": "10.10.125.141",
+                    "phase": "Succeeded",
+                    "podIP": "192.168.29.110",
+                    "podIPs": [
+                        {
+                            "ip": "192.168.29.110"
+                        }
+                    ],
+                    "startTime": "2020-07-29T10:26:18Z"
+                }
+            }
+        '''
+
+        def client = Spy(K8sClient)
+        final POD_NAME = 'nf-5ffc6f18f229c7f5c58965440b309323'
+
+        when:
+        def result = client.podState(POD_NAME)
+        then:
+        1 * client.podStatus(POD_NAME) >> new K8sResponseJson(JSON)
+
+        result == [terminated: [exitCode:9,
+                                reason:'Illegal Pod status']]
+    }
+
     def 'should fail to get pod state' () {
 
         given:
@@ -676,7 +761,6 @@ class K8sClientTest extends Specification {
         e.message == "K8s pod image cannot be pulled -- Back-off pulling image \"nextflow/foo\""
 
     }
-
 
     def 'client should fail when config fail' () {
         given:

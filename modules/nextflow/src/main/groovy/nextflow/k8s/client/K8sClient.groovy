@@ -17,6 +17,8 @@
 
 package nextflow.k8s.client
 
+import groovy.json.JsonSlurper
+
 import javax.net.ssl.HostnameVerifier
 import javax.net.ssl.HttpsURLConnection
 import javax.net.ssl.SSLContext
@@ -242,6 +244,19 @@ class K8sClient {
                 def waiting = state.waiting as Map
                 checkInvalidWaitingState(waiting, resp)
             }
+
+            if ( state?.running && status?.phase == 'Succeeded' ) {
+                def JSON = '''
+                {
+                    "terminated": {
+                        "exitCode": 9,
+                        "reason": "Illegal Pod status"
+                    }
+                }
+                '''
+                return (Map)new JsonSlurper().parseText(JSON)
+            }
+
             return state
         }
 
